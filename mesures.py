@@ -3,10 +3,11 @@
 import sqlite3
 import time
 from datetime import datetime
-from lecture_dht11 import lire_trame
+from mesures import lire_trame
 
+# Modifié pour n'utiliser qu'un seul capteur pour le moment (ex: armoire 1 sur le GPIO 23)
 CONNEXIONS = {
-    1: 4, 2: 17, 3: 27, 4: 22, 5: 23 # armoire_id -> broche GPIO
+    1: 23  # armoire_id -> broche GPIO
 }
 
 def enregistrer_mesure(connexion, armoire_id, temperature, humidite):
@@ -28,9 +29,13 @@ def boucle_mesure():
                                    humidite)
             except (TimeoutError, ValueError) as e:
                 print(f"Armoire {armoire_id} : erreur de lecture ({e})")
-        # ... à compléter : attendre le temps restant pour respecter la période de 10 s
-        duree_ecoulee = ...
-        time.sleep(...)
+
+        duree_ecoulee = time.time() - debut
+
+        temps_restant = 10.0 - duree_ecoulee
+
+        if temps_restant > 0:
+            time.sleep(temps_restant)
 
 if __name__ == "__main__":
     boucle_mesure()
