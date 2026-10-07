@@ -1,67 +1,50 @@
 #!/usr/bin/env python3
 
 import time
-import RPi.GPIO as GPIO
+import board
+import adafruit_dht
 
-PIN_DATA = 1 # broche à adapter
+PIN_DATA = 23
 
-def envoyer_signal_depart(pin):
-	GPIO.setup(pin, GPIO.OUT)
-	GPIO.output(pin, GPIO.LOW)
-	time.sleep(0.018) # 18ms
-	GPIO.output(pin, GPIO.HIGH)
-	time.sleep(0.00003)
-	GPIO.setup(pin, GPIO.IN)
+# Initialisation du capteur
+capteur_dht = adafruit_dht.DHT11(board.D23)
 
-def attendre_reponse_capteur(pin):
-	while GPIO.input(pin) == GPIO.HIGH:
-		pass
-	while GPIO.input(pin) == GPIO.LOW:
-		pass
-	while GPIO.input(pin) == GPIO.HIGH:
-                pass
-	return True
+def lire_trame_avec_retry(max_retries=3, delai_retry=2.1):
+    """
+    Tente de lire le capteur. En cas d'échec, applique une stratégie 
+    de nouvelle tentative (retry) jusqu'à max_retries.
+    """
+    for tentative in range(1, max_retries + 1):
+        try:
+            temperature = capteur_dht.temperature
+            humidite = capteur_dht.humidity
 
-def lire_bit(pin):
-	while GPIO.input(pin) == GPIO.LOW:
-		pass
-	debut_haut = time.time()
-	while GPIO.input(pin) == GPIO.HIGH:
-		pass
-	fin_haut = time.time()
-	duree_haut_us = (fin_haut - debut_haut) * 1000000
-	if duree_haut_us > 50:
-		return 1
-	else:
-		return 0
+            if temperature is not None and humidite is not None:
+                return temperature, humidite
 
-
-def lire_trame(pin):
-	GPIO.setmode(GPIO.BCM)
-	envoyer_signal_depart(pin)
-	if not attendre_reponse_capteur(pin):
-		raise TimeoutError("Pas de réponse du capteur")
-
-	octets = [0, 0, 0, 0, 0]
-	for i in range (40):
-		bit = lire_bit(pin)
-		octets[i // 8] = (octets[i // 8] << 1 ) | bit
-
-	checksum = sum(octets[0:4]) & 0xFF
-	if checksum != octets[4]:
-		raise ValueError("Erreur de Checksum")
-
-	humidite = octets[0]
-	temperature=octets[2]
-	return temperature, humidite
+        except RuntimeError as e:
+            # Si on a encore des essais disponibles, on attend et on boucle
+            if tentative < max_retries:
+                print(f"  [Alerte] Échec lecture ({tentative}/{max_retries}). Nouvelle tentative dans {delai_retry}s...")
+                time.sleep(delai_retry)
+            else:
+                # Plus d'essais dispo : on transmet l'erreur finale
+                raise RuntimeError(f"Capteur indisponible après {max_retries} tentatives.")
 
 if __name__ == "__main__":
-	while True:
-		try:
-			temp, hum = lire_trame(PIN_DATA)
-			print(f"Température : {temp} °C - Humidité : {hum} %")
-		except (TimeoutError, ValueError) as e:
-			print(f"Erreur de lecture : {e}")
-		time.sleep(2)
+    print("=== Stratégie de Retry ===")
+    try:
+        while True:
+            try:
+                # Appel de la fonction robuste
+                temp, hum = lire_trame_avec_retry(max_retries=3, delai_retry=2.1)
+                print(f"Température : {temp:.1f} °C - Humidité : {hum}%")
+            except RuntimeError as e:
+                print(f"Erreur Critique : {e}")
 
+            # Temps d'attente normal entre deux cycles de supervision
+            time.sleep(5.0)
 
+    except KeyboardInterrupt:
+        capteur_dht.exit()
+        print("\nFin du programme")
