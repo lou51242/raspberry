@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tableau de bord - Températures</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    
+    <script src="{{ url_for('static', filename='supervision.js') }}"></script>
 </head>
 <body>
 
@@ -46,7 +50,7 @@
                         {% endif %}
                     </td>
                     
-                    <td>
+                    <td class="statut-cell">
                         {% if item.mesure %}
                             {% if item.conforme %}
                                 <span class="statut conforme">Conforme</span>
@@ -66,8 +70,6 @@
             </tbody>
         </table>
     </main>
-
-    <script src="{{ url_for('static', filename='supervision.js') }}"></script>
 
 </body>
 </html>
