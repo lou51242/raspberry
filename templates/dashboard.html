@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de bord - Températures</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <header>
+        <h1>Supervision des Armoires Réfrigérées</h1>
+    </header>
+
+    <main>
+        <table>
+            <thead>
+                <tr>
+                    <th>Armoire</th>
+                    <th>Seuils Tolérance</th>
+                    <th>Dernière Température</th>
+                    <th>Dernière Humidité</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in donnees %}
+                <tr id="armoire-{{ item.armoire.id }}">
+                    <td>Armoire {{ item.armoire.id }}</td>
+                    <td>{{ item.armoire.temp_min }}°C à {{ item.armoire.temp_max }}°C</td>
+                    
+                    <td class="temperature">
+                        {% if item.mesure %}
+                            {{ item.mesure.temperature }} °C
+                        {% else %}
+                            --
+                        {% endif %}
+                    </td>
+                    
+                    <td class="humidity">
+                        {% if item.mesure %}
+                            {{ item.mesure.humidite }}%
+                        {% else %}
+                            --
+                        {% endif %}
+                    </td>
+                    
+                    <td>
+                        {% if item.mesure %}
+                            {% if item.conforme %}
+                                <span class="statut conforme">Conforme</span>
+                            {% else %}
+                                <span class="statut non-conforme">Non conforme</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="statut inconnu">Inconnu</span>
+                        {% endif %}
+                    </td>
+                    
+                    <td>
+                        <a href="{{ url_for('historique', armoire_id=item.armoire.id) }}" class="btn">Voir l'historique</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </main>
+
+    <script src="{{ url_for('static', filename='supervision.js') }}"></script>
+
+</body>
+</html>

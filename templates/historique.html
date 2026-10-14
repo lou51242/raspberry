@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historique Armoire {{ armoire_id }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <header>
+        <h1>Historique de l'Armoire {{ armoire_id }} (7 derniers jours)</h1>
+        <a href="{{ url_for('dashboard') }}" class="btn">Retour au Tableau de Bord</a>
+        <a href="{{ url_for('generer_rapport_haccp', armoire_id=armoire_id) }}" class="btn">Télécharger le rapport réglementaire PDF (HACCP)</a>
+    </header>
+
+    <main>
+        <div class="chart-container" style="position: relative; height:45vh; width:85vw; margin: auto;">
+            <canvas id="graphiqueTemperature"></canvas>
+        </div>
+    </main>
+
+    <script>
+        // Récupération sécurisée des données Flask/Jinja
+        const donneesBrutes = [
+            {% for mesure in mesures %}
+                {% if mesure.horodatage and mesure.temperature is not none %}
+                {
+                    horodatage: "{{ mesure.horodatage }}",
+                    temperature: {{ mesure.temperature }}
+                },
+                {% endif %}
+            {% endfor %}
+        ];
+
+        // Formatage des dates pour l'axe X
+        const labels = donneesBrutes.map(m => {
+            const date = new Date(m.horodatage);
+            return isNaN(date.getTime()) ? m.horodatage : date.toLocaleDateString('fr-FR', { 
+                day: '2-digit', 
+                month: '2-digit', 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        });
+        
+        const temperatures = donneesBrutes.map(m => m.temperature);
+
+        // Initialisation de Chart.js
+        const ctx = document.getElementById('graphiqueTemperature').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Température (°C)',
+                    data: temperatures,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 2,
+                    tension: 0.2, // Légère courbe pour l'évolution
+                    pointRadius: 1 // Points discrets si beaucoup de mesures sur 7 jours
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Date et Heure'
+                        }
+                    },
+                    y: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Température (°C)'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
